@@ -10,13 +10,7 @@ from loguru import logger
 
 app = flask.Flask(__name__)
 
-
-# TODO load TELEGRAM_TOKEN value from Secret Manager
-# Use this code snippet in your app.
-# If you need more information about configurations
-# or implementing the sample code, visit the AWS docs:
-# https://aws.amazon.com/developer/language/python/
-
+# Code copied from aws credentials manager
 def get_secret():
 
     secret_name = "barrotem/polybot/k8s-project"
@@ -34,16 +28,17 @@ def get_secret():
             SecretId=secret_name
         )
     except ClientError as e:
-        # For a list of exceptions thrown, see
-        # https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
-        raise e
-    print(get_secret_value_response)
-    secret = get_secret_value_response['SecretString']
-    print(secret)
+         raise e
+    secret = get_secret_value_response['SecretString'] #secret is a dictionary of all secrets defined within the manager
+    return secret
 
     # Your code goes here.
-TELEGRAM_TOKEN = get_secret()
+secrets_dict = get_secret()
+logger.info(f'Secrets_dict: {secrets_dict} type : {type(secrets_dict)}')
+TELEGRAM_TOKEN = secrets_dict["TELEGRAM_TOKEN"]
+logger.info(f'TELEGRAM_TOKEN: {TELEGRAM_TOKEN}')
 
+# TODO : This needs to be the LB's URL
 TELEGRAM_APP_URL = os.environ['TELEGRAM_APP_URL']
 
 
