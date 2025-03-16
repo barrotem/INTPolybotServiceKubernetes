@@ -7,12 +7,13 @@ from bot import ObjectDetectionBot
 import boto3
 from botocore.exceptions import ClientError
 from loguru import logger
+import json
 
 app = flask.Flask(__name__)
 
+
 # Code copied from aws credentials manager
 def get_secret():
-
     secret_name = "barrotem/polybot/k8s-project"
     region_name = "eu-north-1"
 
@@ -28,18 +29,18 @@ def get_secret():
             SecretId=secret_name
         )
     except ClientError as e:
-         raise e
-    secret = get_secret_value_response['SecretString'] #secret is a dictionary of all secrets defined within the manager
+        raise e
+    secret = get_secret_value_response['SecretString']  #secret is a dictionary of all secrets defined within the manager
     return secret
 
-    # Your code goes here.
-secrets_dict = get_secret()
+
+secrets_dict = json.loads(get_secret())
 logger.info(f'Secrets_dict: {secrets_dict} type : {type(secrets_dict)}')
 TELEGRAM_TOKEN = secrets_dict["TELEGRAM_TOKEN"]
-logger.info(f'TELEGRAM_TOKEN: {TELEGRAM_TOKEN}')
+TELEGRAM_APP_URL = secrets_dict["TELEGRAM_APP_URL"]
 
-# TODO : This needs to be the LB's URL
-TELEGRAM_APP_URL = os.environ['TELEGRAM_APP_URL']
+logger.info(f'TELEGRAM_TOKEN: {TELEGRAM_TOKEN}, TELEGRAM_APP_URL: {TELEGRAM_APP_URL}')
+
 
 
 @app.route('/', methods=['GET'])
