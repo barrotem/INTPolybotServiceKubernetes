@@ -43,10 +43,6 @@ logger.info(f'TELEGRAM_TOKEN: {TELEGRAM_TOKEN}, TELEGRAM_APP_URL: {TELEGRAM_APP_
 
 
 
-@app.route('/healthz', methods=['GET'])
-def index():
-    return 'Service is up'
-
 @app.route('/', methods=['GET'])
 def index():
     return 'Ok'
