@@ -3,7 +3,7 @@ import flask
 from flask import request
 import os
 from bot import ObjectDetectionBot
-
+# Define aws related modules
 import boto3
 from botocore.exceptions import ClientError
 from loguru import logger
@@ -38,7 +38,7 @@ secrets_dict = json.loads(get_secret())
 logger.info(f'Secrets_dict: {secrets_dict} type : {type(secrets_dict)}')
 TELEGRAM_TOKEN = secrets_dict["TELEGRAM_TOKEN"]
 TELEGRAM_APP_URL = secrets_dict["TELEGRAM_APP_URL"]
-
+IMAGES_BUCKET = secrets_dict["IMAGES_BUCKET"]
 logger.info(f'TELEGRAM_TOKEN: {TELEGRAM_TOKEN}, TELEGRAM_APP_URL: {TELEGRAM_APP_URL}')
 
 
@@ -76,6 +76,6 @@ def load_test():
 
 
 if __name__ == "__main__":
-    bot = ObjectDetectionBot(TELEGRAM_TOKEN, TELEGRAM_APP_URL)
+    bot = ObjectDetectionBot(TELEGRAM_TOKEN, TELEGRAM_APP_URL,IMAGES_BUCKET)
 
     app.run(host='0.0.0.0', port=8443)
