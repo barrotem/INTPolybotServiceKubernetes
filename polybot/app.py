@@ -1,12 +1,12 @@
 # Define required modules
 import flask
 from flask import request
-import os
+from loguru import logger
+# import os - unused due to secret manager usage
 from bot import ObjectDetectionBot
 # Define aws related modules
 import boto3
 from botocore.exceptions import ClientError
-from loguru import logger
 import json
 
 app = flask.Flask(__name__)
@@ -33,13 +33,15 @@ def get_secret():
     secret = get_secret_value_response['SecretString']  #secret is a dictionary of all secrets defined within the manager
     return secret
 
-
+# Load secrets from AWS Secret Manager
 secrets_dict = json.loads(get_secret())
 logger.info(f'Secrets_dict: {secrets_dict} type : {type(secrets_dict)}')
+# Access secrets loaded from secret manager
 TELEGRAM_TOKEN = secrets_dict["TELEGRAM_TOKEN"]
 TELEGRAM_APP_URL = secrets_dict["TELEGRAM_APP_URL"]
 IMAGES_BUCKET = secrets_dict["IMAGES_BUCKET"]
-logger.info(f'TELEGRAM_TOKEN: {TELEGRAM_TOKEN}, TELEGRAM_APP_URL: {TELEGRAM_APP_URL}')
+
+#logger.info(f'TELEGRAM_TOKEN: {TELEGRAM_TOKEN}, TELEGRAM_APP_URL: {TELEGRAM_APP_URL}')
 
 
 
@@ -76,6 +78,6 @@ def load_test():
 
 
 if __name__ == "__main__":
-    bot = ObjectDetectionBot(TELEGRAM_TOKEN, TELEGRAM_APP_URL,IMAGES_BUCKET)
+    bot = ObjectDetectionBot(TELEGRAM_TOKEN, TELEGRAM_APP_URL,IMAGES_BUCKET, POLYBOT_QUEUE)
 
     app.run(host='0.0.0.0', port=8443)

@@ -4,12 +4,40 @@ from detect import run
 import yaml
 from loguru import logger
 import os
+# Define aws related modules
 import boto3
+from botocore.exceptions import ClientError
+import json
 
-images_bucket = os.environ['BUCKET_NAME']
-queue_name = os.environ['SQS_QUEUE_NAME']
+def get_secret():
+    secret_name = "barrotem/polybot/k8s-project"
+    region_name = "eu-north-1"
 
-sqs_client = boto3.client('sqs', region_name='YOUR_REGION_HERE')
+    # Create a Secrets Manager client
+    session = boto3.session.Session()
+    client = session.client(
+        service_name='secretsmanager',
+        region_name=region_name
+    )
+
+    try:
+        get_secret_value_response = client.get_secret_value(
+            SecretId=secret_name
+        )
+    except ClientError as e:
+        raise e
+    secret = get_secret_value_response['SecretString']  #secret is a dictionary of all secrets defined within the manager
+    return secret
+
+# Load secrets from AWS Secret Manager
+secrets_dict = json.loads(get_secret())
+logger.info(f'Secrets_dict: {secrets_dict} type : {type(secrets_dict)}')
+# Access secrets loaded from secret manager
+images_bucket = secrets_dict["IMAGES_BUCKET"]
+queue_name = secrets_dict["POLYBOT_QUEUE"]
+region_name = secrets_dict["DEPLOYED_REGION"]
+
+sqs_client = boto3.client('sqs')#, region_name=region_name)
 
 with open("data/coco128.yaml", "r") as stream:
     names = yaml.safe_load(stream)['names']
@@ -27,7 +55,7 @@ def consume():
             prediction_id = response['Messages'][0]['MessageId']
 
             logger.info(f'prediction: {prediction_id}. start processing')
-
+            logger.info(f'message: {message}, receipt_handle : {receipt_handle}')
             # Receives a URL parameter representing the image to download from S3
             img_name = ...  # TODO extract from `message`
             chat_id = ...  # TODO extract from `message`

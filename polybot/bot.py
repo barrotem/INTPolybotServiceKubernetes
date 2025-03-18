@@ -88,11 +88,15 @@ class Bot:
 
 
 class ObjectDetectionBot(Bot):
-    def __init__(self, token, telegram_chat_url, images_bucket):
+    def __init__(self, token, telegram_chat_url, images_bucket, polybot_queue):
         super().__init__(token, telegram_chat_url)
         # Add specific implementation code :
-        # Initialize s3 realted variables
+        # Initialize s3 related variables
         self.s3_client = boto3.client('s3')
+        # Initialize sqs related variables
+        self.sqs_client = boto3.client('sqs')
+        self.sqs_name = polybot_queue
+        # Initialize s3 related variables
         self.images_bucket = images_bucket
         self.greeting_message = """
     Barrotem's polybot service
@@ -115,15 +119,15 @@ class ObjectDetectionBot(Bot):
             # Handle image filename
             supported_image_formats = ['bmp', 'dng', 'jpeg', 'jpg', 'mpo', 'png', 'tif', 'tiff', 'webp']
             s3_photo_key = f'images/{photo_caption}' if photo_caption is not None else f'images/{photo_path.split("/")[1]}'
-            logger.info(f'S3 photo_key : {s3_photo_key}')
             # Check the photo's file extension. Blit .jpg if none - existent
             s3_photo_key_file_extension = s3_photo_key.split(".")[-1]
             s3_photo_key = s3_photo_key if s3_photo_key_file_extension in supported_image_formats else s3_photo_key + '.jpg'
-            logger.info(f'S3 photo_key_new : {s3_photo_key}')
+            logger.info(f'S3 photo_key : {s3_photo_key}')
 
             self.s3_client.upload_file(Filename=photo_path, Bucket=self.images_bucket, Key=s3_photo_key)
             logger.info(f'Successfully uploaded {photo_path} to "{self.images_bucket}" with the caption "{s3_photo_key}"')
 
-            # TODO upload the photo to S3
             # TODO send a job to the SQS queue
+
+            self.sqs_client.send_message(QueueUrl=self.sqs_name, MessageBody=s3_photo_key)
             # TODO send message to the Telegram end-user (e.g. Your image is being processed. Please wait...)
