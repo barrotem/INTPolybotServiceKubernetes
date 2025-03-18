@@ -40,6 +40,7 @@ logger.info(f'Secrets_dict: {secrets_dict} type : {type(secrets_dict)}')
 TELEGRAM_TOKEN = secrets_dict["TELEGRAM_TOKEN"]
 TELEGRAM_APP_URL = secrets_dict["TELEGRAM_APP_URL"]
 IMAGES_BUCKET = secrets_dict["IMAGES_BUCKET"]
+POLYBOT_QUEUE = secrets_dict["POLYBOT_QUEUE"]
 
 #logger.info(f'TELEGRAM_TOKEN: {TELEGRAM_TOKEN}, TELEGRAM_APP_URL: {TELEGRAM_APP_URL}')
 
