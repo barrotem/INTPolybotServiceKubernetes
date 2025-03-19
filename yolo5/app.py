@@ -37,7 +37,7 @@ images_bucket = secrets_dict["IMAGES_BUCKET"]
 queue_name = secrets_dict["POLYBOT_QUEUE"]
 region_name = secrets_dict["DEPLOYED_REGION"]
 
-sqs_client = boto3.client('sqs')#, region_name=region_name)
+sqs_client = boto3.client('sqs', region_name=region_name)
 
 with open("data/coco128.yaml", "r") as stream:
     names = yaml.safe_load(stream)['names']
