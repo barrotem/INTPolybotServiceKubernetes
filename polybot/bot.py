@@ -94,7 +94,7 @@ class ObjectDetectionBot(Bot):
         # Initialize s3 related variables
         self.s3_client = boto3.client('s3')
         # Initialize sqs related variables
-        self.sqs_client = boto3.client('sqs')
+        self.sqs_client = boto3.client('sqs', region_name="eu-north-1")
         self.sqs_name = polybot_queue
         # Initialize s3 related variables
         self.images_bucket = images_bucket
@@ -108,6 +108,7 @@ class ObjectDetectionBot(Bot):
     I will return the classified image with the detected objects, and textual representation.
     v1.0.2
             """
+
     def handle_message(self, msg):
         logger.info(f'Incoming message: {msg}')
 
@@ -128,6 +129,5 @@ class ObjectDetectionBot(Bot):
             logger.info(f'Successfully uploaded {photo_path} to "{self.images_bucket}" with the caption "{s3_photo_key}"')
 
             # TODO send a job to the SQS queue
-
             self.sqs_client.send_message(QueueUrl=self.sqs_name, MessageBody=s3_photo_key)
             # TODO send message to the Telegram end-user (e.g. Your image is being processed. Please wait...)
