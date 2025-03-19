@@ -38,7 +38,7 @@ jobs:
       - name: Trigger PolybotInfra Dispatch Workflow
         run: |
           # Curl to PolybotInfra repo and activate the workflow dispatch
-          echo "Triggering PolybotInfra Dispatch Workflow with the following params : {service_name:polybot,image:$IMAGE_NAME}
+          echo "Triggering PolybotInfra Dispatch Workflow with the following params : {service_name:polybot,image:$IMAGE_NAME}"
           
           curl -L \
           -X POST \
