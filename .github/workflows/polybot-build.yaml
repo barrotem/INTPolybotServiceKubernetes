@@ -25,8 +25,7 @@ jobs:
           
           # Login to DockerHub        
           docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_PASSWORD }}
-      
-          #IMAGE_NAME=${{ secrets.DOCKERHUB_USERNAME }}/polybot:v2.0.${{ github.run_number }}-polybot-k8s
+          # Build docker image
           docker build -t $IMAGE_NAME .
           docker push $IMAGE_NAME
 
