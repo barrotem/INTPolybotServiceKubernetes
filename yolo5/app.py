@@ -65,14 +65,17 @@ def consume():
             logger.info(f'message: {message}, receipt_handle : {receipt_handle}')
 
             # Receives a URL parameter representing the image to download from S3
-
             # message_dict is built by the following syntax :
             # {"text": "A new image was uploaded to the s3 bucket", "img_name": s3_photo_key, "chat_id": chat_id}
             message_dict = json.loads(message)
             img_name = message_dict["img_name"]
             chat_id = message_dict["chat_id"]
-
+            # Download image from s3
+            folder_name = img_name.split('/')[0]
+            if not os.path.exists(folder_name):
+                os.makedirs(folder_name)
             s3_client.download_file(Bucket=images_bucket, Key=img_name, Filename=img_name)
+
             original_img_path = img_name  # TODO download img_name from S3, store the local image path in original_img_path
 
             logger.info(f'prediction: {prediction_id}/{original_img_path}. Download img completed')
