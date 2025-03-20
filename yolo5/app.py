@@ -49,12 +49,14 @@ def consume():
         response = sqs_client.receive_message(QueueUrl=queue_name, MaxNumberOfMessages=1, WaitTimeSeconds=5)
 
         if 'Messages' in response:
+            raw_message = response['Messages'][0]
             message = response['Messages'][0]['Body']
             receipt_handle = response['Messages'][0]['ReceiptHandle']
 
             # Use the ReceiptHandle as a prediction UUID
             prediction_id = response['Messages'][0]['MessageId']
 
+            logger.info(f'raw_message: {raw_message}')
             logger.info(f'prediction: {prediction_id}. start processing')
             logger.info(f'message: {message}, receipt_handle : {receipt_handle}')
             # Receives a URL parameter representing the image to download from S3

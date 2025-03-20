@@ -30,8 +30,10 @@ def get_secret():
         )
     except ClientError as e:
         raise e
-    secret = get_secret_value_response['SecretString']  #secret is a dictionary of all secrets defined within the manager
+    secret = get_secret_value_response[
+        'SecretString']  #secret is a dictionary of all secrets defined within the manager
     return secret
+
 
 # Load secrets from AWS Secret Manager
 secrets_dict = json.loads(get_secret())
@@ -41,9 +43,6 @@ TELEGRAM_TOKEN = secrets_dict["TELEGRAM_TOKEN"]
 TELEGRAM_APP_URL = secrets_dict["TELEGRAM_APP_URL"]
 IMAGES_BUCKET = secrets_dict["IMAGES_BUCKET"]
 POLYBOT_QUEUE = secrets_dict["POLYBOT_QUEUE"]
-
-#logger.info(f'TELEGRAM_TOKEN: {TELEGRAM_TOKEN}, TELEGRAM_APP_URL: {TELEGRAM_APP_URL}') Dummy#7
-
 
 
 @app.route('/', methods=['GET'])
@@ -79,6 +78,6 @@ def load_test():
 
 
 if __name__ == "__main__":
-    bot = ObjectDetectionBot(TELEGRAM_TOKEN, TELEGRAM_APP_URL,IMAGES_BUCKET, POLYBOT_QUEUE)
+    bot = ObjectDetectionBot(TELEGRAM_TOKEN, TELEGRAM_APP_URL, IMAGES_BUCKET, POLYBOT_QUEUE)
 
     app.run(host='0.0.0.0', port=8443)
