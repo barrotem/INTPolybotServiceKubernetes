@@ -38,21 +38,6 @@ class Bot:
         Downloads the photos that sent to the Bot to `photos` directory (should be existed)
         :return:
         """
-        # if not self.is_current_msg_photo(msg):
-        #     raise RuntimeError(f'Message content of type \'photo\' expected')
-        #
-        # file_info = self.telegram_bot_client.get_file(msg['photo'][-1]['file_id'])
-        # data = self.telegram_bot_client.download_file(file_info.file_path)
-        # folder_name = file_info.file_path.split('/')[0]
-        #
-        # if not os.path.exists(folder_name):
-        #     os.makedirs(folder_name)
-        #
-        # with open(file_info.file_path, 'wb') as photo:
-        #     photo.write(data)
-        #
-        # return file_info.file_path
-
         logger.info(f'Received a new photo !')
         # Get photo files depending on uploading source - phone / desktop
         if 'photo' in msg:
@@ -117,22 +102,24 @@ class ObjectDetectionBot(Bot):
             #Download the photo to local pod storage
             photo_path, photo_caption = self.download_user_photo(msg)
 
-            # Upload the photo to S3
             # Handle image filename
             supported_image_formats = ['bmp', 'dng', 'jpeg', 'jpg', 'mpo', 'png', 'tif', 'tiff', 'webp']
             s3_photo_key = f'images/{photo_caption}' if photo_caption is not None else f'images/{photo_path.split("/")[1]}'
             # Check the photo's file extension. Blit .jpg if none - existent
             s3_photo_key_file_extension = s3_photo_key.split(".")[-1]
             s3_photo_key = s3_photo_key if s3_photo_key_file_extension in supported_image_formats else s3_photo_key + '.jpg'
-            logger.info(f'S3 photo_key : {s3_photo_key}')
+            logger.info(f'Set received photo key to : {s3_photo_key}')
 
+            # Upload the photo to S3
             self.s3_client.upload_file(Filename=photo_path, Bucket=self.images_bucket, Key=s3_photo_key)
-            logger.info(
-                f'Successfully uploaded {photo_path} to "{self.images_bucket}" with the caption "{s3_photo_key}"')
+            logger.info(f'Successfully uploaded {photo_path} to "{self.images_bucket}" with the caption "{s3_photo_key}"')
 
-            # TODO send a job to the SQS queue
-            sqs_message_body = {"text": "A new image was uploaded to the s3 bucket", "img_name": s3_photo_key, "chat_id": msg['chat']['id']}
+            # Send a job to the SQS queue
+            chat_id = msg['chat']['id']
+            sqs_message_body = {"text": "A new image was uploaded to the s3 bucket", "img_name": s3_photo_key, "chat_id": chat_id}
             sqs_message_body = json.dumps(sqs_message_body)
-            logger.info(f'sqs_message_body:{sqs_message_body} ,type:{type(sqs_message_body)}')
-            self.sqs_client.send_message(QueueUrl=self.sqs_name, MessageBody=sqs_message_body,)
-            # TODO send message to the Telegram end-user (e.g. Your image is being processed. Please wait...)
+            logger.info(f'Sending a job to sqs')
+            self.sqs_client.send_message(QueueUrl=self.sqs_name, MessageBody=sqs_message_body)
+
+            # Send message to the Telegram end-user (e.g. Your image is being processed. Please wait...)
+            self.send_text(chat_id,"Image received and is being processed. Please wait...")

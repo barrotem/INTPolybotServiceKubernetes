@@ -27,17 +27,20 @@ def get_secret():
         )
     except ClientError as e:
         raise e
-    secret = get_secret_value_response['SecretString']  #secret is a dictionary of all secrets defined within the manager
+    secret = get_secret_value_response[
+        'SecretString']  #secret is a dictionary of all secrets defined within the manager
     return secret
+
 
 # Load secrets from AWS Secret Manager
 secrets_dict = json.loads(get_secret())
-logger.info(f'Secrets_dict: {secrets_dict} type : {type(secrets_dict)}')
 # Access secrets loaded from secret manager
 images_bucket = secrets_dict["IMAGES_BUCKET"]
 queue_name = secrets_dict["POLYBOT_QUEUE"]
 region_name = secrets_dict["DEPLOYED_REGION"]
 
+# Initialize AWS clients for image processing
+s3_client = boto3.client('s3')
 sqs_client = boto3.client('sqs', region_name=region_name)
 
 with open("data/coco128.yaml", "r") as stream:
@@ -46,7 +49,6 @@ with open("data/coco128.yaml", "r") as stream:
 
 def consume():
     while True:
-        #Dummy comit
         response = sqs_client.receive_message(QueueUrl=queue_name, MaxNumberOfMessages=1, WaitTimeSeconds=5)
 
         if 'Messages' in response:
@@ -56,17 +58,22 @@ def consume():
 
             # Use the ReceiptHandle as a prediction UUID
             prediction_id = response['Messages'][0]['MessageId']
+            #logger.info(f'raw_message: {raw_message}')
 
-            logger.info(f'raw_message: {raw_message}')
+            # Log relevant information to the console
             logger.info(f'prediction: {prediction_id}. start processing')
             logger.info(f'message: {message}, receipt_handle : {receipt_handle}')
+
             # Receives a URL parameter representing the image to download from S3
-            logger.info(f'message type:{type(message)}')
+
+            # message_dict is built by the following syntax :
+            # {"text": "A new image was uploaded to the s3 bucket", "img_name": s3_photo_key, "chat_id": chat_id}
             message_dict = json.loads(message)
-            logger.info(f'message_dict type:{type(message_dict)}, contents:{message_dict}')
-            img_name = ...  # TODO extract from `message`
-            chat_id = ...  # TODO extract from `message`
-            original_img_path = ...  # TODO download img_name from S3, store the local image path in original_img_path
+            img_name = message_dict["img_name"]
+            chat_id = message_dict["chat_id"]
+
+            s3_client.download_file(Bucket=images_bucket, Key=img_name, Filename=img_name)
+            original_img_path = img_name  # TODO download img_name from S3, store the local image path in original_img_path
 
             logger.info(f'prediction: {prediction_id}/{original_img_path}. Download img completed')
 
@@ -81,12 +88,16 @@ def consume():
             )
 
             logger.info(f'prediction: {prediction_id}/{original_img_path}. done')
-
             # This is the path for the predicted image with labels
-            # The predicted image typically includes bounding boxes drawn around the detected objects, along with class labels and possibly confidence scores.
+            # The predicted image typically includes bounding boxes drawn around the detected objects,
+            # along with class labels and possibly confidence scores.
             predicted_img_path = Path(f'static/data/{prediction_id}/{original_img_path}')
 
+            # Upload the predicted image to s3
+            predicted_img_key = f'predictions/{img_name.split("/")[1]}'  # Taking img_name suffix into account, this creates : "prediction/filename.filetype"
+            s3_client.upload_file(Filename=predicted_img_path, Bucket=images_bucket, Key=predicted_img_key)
             # TODO Uploads the predicted image (predicted_img_path) to S3 (be careful not to override the original image).
+            logger.info(f'prediction: {prediction_id}/{original_img_path} uploaded to s3 with the key: {predicted_img_key}.')
 
             # Parse prediction labels and create a summary
             pred_summary_path = Path(f'static/data/{prediction_id}/labels/{original_img_path.split(".")[0]}.txt')

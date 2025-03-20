@@ -37,7 +37,6 @@ def get_secret():
 
 # Load secrets from AWS Secret Manager
 secrets_dict = json.loads(get_secret())
-logger.info(f'Secrets_dict: {secrets_dict} type : {type(secrets_dict)}')
 # Access secrets loaded from secret manager
 TELEGRAM_TOKEN = secrets_dict["TELEGRAM_TOKEN"]
 TELEGRAM_APP_URL = secrets_dict["TELEGRAM_APP_URL"]
