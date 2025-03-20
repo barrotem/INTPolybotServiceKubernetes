@@ -98,7 +98,7 @@ def consume():
 
             # Upload the predicted image to s3
             predicted_img_key = f'predictions/{img_name.split("/")[1]}'  # Taking img_name suffix into account, this creates : "prediction/filename.filetype"
-            s3_client.upload_file(Filename=predicted_img_path, Bucket=images_bucket, Key=predicted_img_key)
+            #s3_client.upload_file(Filename=predicted_img_path, Bucket=images_bucket, Key=predicted_img_key)
             # TODO Uploads the predicted image (predicted_img_path) to S3 (be careful not to override the original image).
             logger.info(f'prediction: {prediction_id}/{original_img_path} uploaded to s3 with the key: {predicted_img_key}.')
 
