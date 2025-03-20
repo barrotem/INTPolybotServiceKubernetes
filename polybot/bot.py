@@ -3,6 +3,7 @@ from loguru import logger
 import os
 import time
 from telebot.types import InputFile
+import json
 # Define aws related modules
 import boto3
 
@@ -126,11 +127,12 @@ class ObjectDetectionBot(Bot):
             logger.info(f'S3 photo_key : {s3_photo_key}')
 
             self.s3_client.upload_file(Filename=photo_path, Bucket=self.images_bucket, Key=s3_photo_key)
-            logger.info(f'Successfully uploaded {photo_path} to "{self.images_bucket}" with the caption "{s3_photo_key}"')
+            logger.info(
+                f'Successfully uploaded {photo_path} to "{self.images_bucket}" with the caption "{s3_photo_key}"')
 
             # TODO send a job to the SQS queue
-            sqs_message_body = "A new image was uploaded to the s3 bucket"
-            sqs_message_attrs = {"img_name":"s3_photo_key","chat_id":msg['chat']['id']}
-
-            self.sqs_client.send_message(QueueUrl=self.sqs_name, MessageBody=sqs_message_body, MessageAttributes=sqs_message_attrs)
+            sqs_message_body = {"text": "A new image was uploaded to the s3 bucket", "img_name": s3_photo_key, "chat_id": msg['chat']['id']}
+            sqs_message_body = json.dumps(sqs_message_body)
+            logger.info(f'sqs_message_body:{sqs_message_body} ,type:{type(sqs_message_body)}')
+            self.sqs_client.send_message(QueueUrl=self.sqs_name, MessageBody=sqs_message_body,)
             # TODO send message to the Telegram end-user (e.g. Your image is being processed. Please wait...)

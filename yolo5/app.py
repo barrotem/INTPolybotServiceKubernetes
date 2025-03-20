@@ -3,11 +3,12 @@ from pathlib import Path
 from detect import run
 import yaml
 from loguru import logger
+import json
 import os
 # Define aws related modules
 import boto3
 from botocore.exceptions import ClientError
-import json
+
 
 def get_secret():
     secret_name = "barrotem/polybot/k8s-project"
@@ -60,6 +61,9 @@ def consume():
             logger.info(f'prediction: {prediction_id}. start processing')
             logger.info(f'message: {message}, receipt_handle : {receipt_handle}')
             # Receives a URL parameter representing the image to download from S3
+            logger.info(f'message type:{type(message)}')
+            message_dict = json.loads(message)
+            logger.info(f'message_dict type:{type(message_dict)}, contents:{message_dict}')
             img_name = ...  # TODO extract from `message`
             chat_id = ...  # TODO extract from `message`
             original_img_path = ...  # TODO download img_name from S3, store the local image path in original_img_path
