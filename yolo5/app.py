@@ -134,4 +134,7 @@ def consume():
 
 
 if __name__ == "__main__":
-    consume()
+    try:
+        consume()
+    except Exception as e:
+        print(e)
