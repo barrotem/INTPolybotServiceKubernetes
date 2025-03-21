@@ -3,4 +3,6 @@ loguru
 # AWS integration required modules
 boto3
 botocore
+# Polybot microservices interaction required modules
 pymongo
+requests

@@ -4,8 +4,9 @@ loguru>=0.7.0
 requests>=2.31.0
 flask>=2.3.2
 # AWS integration required modules
-#matplotlib
 boto3
 botocore
 # Extras
 loguru
+# Polybot microservices interaction required modules
+pymongo

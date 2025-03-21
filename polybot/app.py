@@ -2,12 +2,13 @@
 import flask
 from flask import request
 from loguru import logger
-# import os - unused due to secret manager usage
 from bot import ObjectDetectionBot
 # Define aws related modules
 import boto3
 from botocore.exceptions import ClientError
 import json
+# Define polybot microservices related modules
+import pymongo
 
 app = flask.Flask(__name__)
 
@@ -30,7 +31,8 @@ def get_secret():
         )
     except ClientError as e:
         raise e
-    secret = get_secret_value_response['SecretString']  #secret is a dictionary of all secrets defined within the manager
+    secret = get_secret_value_response[
+        'SecretString']  #secret is a dictionary of all secrets defined within the manager
     return secret
 
 
@@ -41,6 +43,9 @@ TELEGRAM_TOKEN = secrets_dict["TELEGRAM_TOKEN"]
 TELEGRAM_APP_URL = secrets_dict["TELEGRAM_APP_URL"]
 IMAGES_BUCKET = secrets_dict["IMAGES_BUCKET"]
 POLYBOT_QUEUE = secrets_dict["POLYBOT_QUEUE"]
+# Initialize polybot microservices related variables
+MONGO_URI = f'mongodb://{secrets_dict["MONGODB_HOSTS"]}/{secrets_dict["MONGODB_NAME"]}?replicaSet={secrets_dict["MONGODB_RS_NAME"]}'
+mongo_client = pymongo.MongoClient(MONGO_URI)
 
 
 @app.route('/', methods=['GET'])
@@ -57,12 +62,19 @@ def webhook():
 
 @app.route(f'/results', methods=['POST'])
 def results():
+    # Use the prediction_id to retrieve results from MongoDB and send to the end-user
     prediction_id = request.args.get('predictionId')
+    chat_id = request.args.get('chatId')
 
-    # TODO use the prediction_id to retrieve results from MongoDB and send to the end-user
-
-    chat_id = ...
-    text_results = ...
+    test_db_client = mongo_client["test"]
+    predictions_collection = test_db_client["predictions"]
+    # Store a prediction inside the predictions collections
+    document = predictions_collection.find_one({"_id": prediction_id})
+    if document is not None:
+        logger.info(f'document: {document}, document type: {tyype(document)}')
+        text_results = ...
+    else:
+        text_results = "No prediction could be made for the given image. Please try a different image"
 
     bot.send_text(chat_id, text_results)
     return 'Ok'

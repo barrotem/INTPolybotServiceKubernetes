@@ -5,6 +5,7 @@ import yaml
 from loguru import logger
 import json
 import os
+import requests
 # Define aws related modules
 import boto3
 from botocore.exceptions import ClientError
@@ -42,7 +43,6 @@ QUEUE_NAME = secrets_dict["POLYBOT_QUEUE"]
 REGION_NAME = secrets_dict["DEPLOYED_REGION"]
 # Initialize polybot microservices related variables
 MONGO_URI = f'mongodb://{secrets_dict["MONGODB_HOSTS"]}/{secrets_dict["MONGODB_NAME"]}?replicaSet={secrets_dict["MONGODB_RS_NAME"]}'
-logger.info(MONGO_URI)
 mongo_client = pymongo.MongoClient(MONGO_URI)
 
 # Initialize AWS clients for image processing
@@ -59,13 +59,11 @@ def consume():
         response = sqs_client.receive_message(QueueUrl=QUEUE_NAME, MaxNumberOfMessages=1, WaitTimeSeconds=5)
 
         if 'Messages' in response:
-            raw_message = response['Messages'][0]
             message = response['Messages'][0]['Body']
             receipt_handle = response['Messages'][0]['ReceiptHandle']
 
             # Use the ReceiptHandle as a prediction UUID
             prediction_id = response['Messages'][0]['MessageId']
-            #logger.info(f'raw_message: {raw_message}')
 
             # Log relevant information to the console
             logger.info(f'prediction: {prediction_id}. start processing')
@@ -84,7 +82,7 @@ def consume():
                 os.makedirs(folder_name)
             s3_client.download_file(Bucket=IMAGES_BUCKET, Key=img_name, Filename=img_name)
             original_img_path = img_name
-            original_img_name =  original_img_path.split("/")[1] # Represents the image's final path component - it's name
+            original_img_name = original_img_path.split("/")[1] # Represents the image's final path component - it's name
 
             logger.info(f'prediction: {prediction_id}/{original_img_path}. Download img completed')
 
@@ -124,12 +122,13 @@ def consume():
                         'height': float(l[4]),
                     } for l in labels]
 
-                logger.info(f'prediction: {prediction_id}/{original_img_path}. prediction summary:\n\n{labels}')
+                logger.info(f'prediction: {prediction_id}/{original_img_path}. prediction summary:\n\n{labels}.')
 
                 prediction_summary = {
                     'prediction_id': prediction_id,
                     'original_img_path': original_img_path,
                     'predicted_img_path': str(predicted_img_path),
+                    's3_img_path': predicted_img_key,
                     'labels': labels,
                     'time': time.time()
                 }
@@ -141,13 +140,18 @@ def consume():
                 # Store a prediction inside the predictions collections
                 document = {"_id": prediction_id, "prediction_summary": prediction_summary} # Allow fast indexing using prediction_id as the table's primary_key
                 write_result = predictions_collection.insert_one(document)
-                logger.info(f'Mongodb write result: {write_result}')
+                logger.info(f'Mongodb write result: {write_result}.')
 
-                # TODO perform a GET request to Polybot to `/results` endpoint
+            # The following block is executed whether predictions were made or not. Therefore, the user should be updated accordingly
+            # Perform a POST request to Polybot to `/results` endpoint
+            logger.info(f'Image processing finished. Sending a POST request to polybot.')
+            requests.post(url=f'http://polybot-service:8443/results?predictionId={prediction_id}&chatId={chat_id}')
 
             # Delete the message from the queue as the job is considered as DONE
             logger.info(f'Deleting message {receipt_handle} from sqs, image processed successfully')
             sqs_client.delete_message(QueueUrl=QUEUE_NAME, ReceiptHandle=receipt_handle)
+
+
 
 
 if __name__ == "__main__":
