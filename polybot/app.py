@@ -71,7 +71,7 @@ def results():
     # Store a prediction inside the predictions collections
     document = predictions_collection.find_one({"_id": prediction_id})
     if document is not None:
-        logger.info(f'document: {document}, document type: {tyype(document)}')
+        logger.info(f'document: {document}, document type: {type(document)}')
         text_results = ...
     else:
         text_results = "No prediction could be made for the given image. Please try a different image"
