@@ -70,13 +70,14 @@ def consume():
             message_dict = json.loads(message)
             img_name = message_dict["img_name"]
             chat_id = message_dict["chat_id"]
+
             # Download image from s3
             folder_name = img_name.split('/')[0]
             if not os.path.exists(folder_name):
                 os.makedirs(folder_name)
             s3_client.download_file(Bucket=images_bucket, Key=img_name, Filename=img_name)
-
-            original_img_path = img_name  # TODO download img_name from S3, store the local image path in original_img_path
+            original_img_path = img_name
+            original_img_name =  original_img_path.split("/")[1] # Represents the image's final path component - it's name
 
             logger.info(f'prediction: {prediction_id}/{original_img_path}. Download img completed')
 
@@ -94,16 +95,17 @@ def consume():
             # This is the path for the predicted image with labels
             # The predicted image typically includes bounding boxes drawn around the detected objects,
             # along with class labels and possibly confidence scores.
-            predicted_img_path = Path(f'static/data/{prediction_id}/{original_img_path}')
+
+            predicted_img_path = Path(f'static/data/{prediction_id}/{original_img_name}')  # Yolo5 saves predicted image to a path determined by image filename only
 
             # Upload the predicted image to s3
-            predicted_img_key = f'predictions/{img_name.split("/")[1]}'  # Taking img_name suffix into account, this creates : "prediction/filename.filetype"
-            #s3_client.upload_file(Filename=predicted_img_path, Bucket=images_bucket, Key=predicted_img_key)
+            predicted_img_key = f'predictions/{original_img_name}'  # Taking img_name suffix into account, this creates : "prediction/filename.filetype"
+            s3_client.upload_file(Filename=predicted_img_path, Bucket=images_bucket, Key=predicted_img_key)
             # TODO Uploads the predicted image (predicted_img_path) to S3 (be careful not to override the original image).
             logger.info(f'prediction: {prediction_id}/{original_img_path} uploaded to s3 with the key: {predicted_img_key}.')
 
             # Parse prediction labels and create a summary
-            pred_summary_path = Path(f'static/data/{prediction_id}/labels/{original_img_path.split(".")[0]}.txt')
+            pred_summary_path = Path(f'static/data/{prediction_id}/labels/{original_img_name.split(".")[0]}.txt')
             if pred_summary_path.exists():
                 with open(pred_summary_path) as f:
                     labels = f.read().splitlines()
@@ -125,6 +127,8 @@ def consume():
                     'labels': labels,
                     'time': time.time()
                 }
+
+                logger.info(f'prediction_summary: {prediction_summary}')
 
                 # TODO store the prediction_summary in a MongoDB table
                 # TODO perform a GET request to Polybot to `/results` endpoint
