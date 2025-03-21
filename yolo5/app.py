@@ -8,6 +8,8 @@ import os
 # Define aws related modules
 import boto3
 from botocore.exceptions import ClientError
+# Define polybot microservices related modules
+import pymongo
 
 
 def get_secret():
@@ -42,6 +44,9 @@ region_name = secrets_dict["DEPLOYED_REGION"]
 # Initialize AWS clients for image processing
 s3_client = boto3.client('s3')
 sqs_client = boto3.client('sqs', region_name=region_name)
+# Initialize polybot microservices related variables
+MONGO_URI = "mongodb://mongodb-statefulset-0.mongodb-service:27017,mongodb-statefulset-1.mongodb-service:27017,mongodb-statefulset-2.mongodb-service:27017/test?replicaSet=mongo_rs"
+mongo_client = pymongo.MongoClient(MONGO_URI)
 
 with open("data/coco128.yaml", "r") as stream:
     names = yaml.safe_load(stream)['names']
@@ -101,7 +106,6 @@ def consume():
             # Upload the predicted image to s3
             predicted_img_key = f'predictions/{original_img_name}'  # Taking img_name suffix into account, this creates : "prediction/filename.filetype"
             s3_client.upload_file(Filename=predicted_img_path, Bucket=images_bucket, Key=predicted_img_key)
-            # TODO Uploads the predicted image (predicted_img_path) to S3 (be careful not to override the original image).
             logger.info(f'prediction: {prediction_id}/{original_img_path} uploaded to s3 with the key: {predicted_img_key}.')
 
             # Parse prediction labels and create a summary
@@ -123,17 +127,23 @@ def consume():
                 prediction_summary = {
                     'prediction_id': prediction_id,
                     'original_img_path': original_img_path,
-                    'predicted_img_path': predicted_img_path,
+                    'predicted_img_path': str(predicted_img_path),
                     'labels': labels,
                     'time': time.time()
                 }
 
-                logger.info(f'prediction_summary: {prediction_summary}')
-
+                logger.info(f'storing prediction_summary in mongodb...')
+                test_db_client = mongo_client["test"]
+                predictions_collection = test_db_client["predictions"]
+                # Store a prediction inside the predictions collections
+                document = {"_id": prediction_id, "prediction_summary": prediction_summary} # Allow fast indexing using prediction_id as the table's primary_key
+                write_result = predictions_collection.insert_one(document)
+                logger.info(f'Mongodb write result: {write_result}')
                 # TODO store the prediction_summary in a MongoDB table
                 # TODO perform a GET request to Polybot to `/results` endpoint
 
             # Delete the message from the queue as the job is considered as DONE
+            logger.info(f'Deleting message {receipt_handle} from sqs, image processed successfully')
             sqs_client.delete_message(QueueUrl=queue_name, ReceiptHandle=receipt_handle)
 
 

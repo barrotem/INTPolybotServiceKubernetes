@@ -3,3 +3,4 @@ loguru
 # AWS integration required modules
 boto3
 botocore
+pymongo
