@@ -121,5 +121,5 @@ class ObjectDetectionBot(Bot):
             logger.info(f'Sending a job to sqs')
             self.sqs_client.send_message(QueueUrl=self.sqs_name, MessageBody=sqs_message_body)
 
-            # Send message to the Telegram end-user (e.g. Your image is being processed. Please wait...)
-            self.send_text(chat_id,"Image received and is being processed. Please wait...")
+            # Send message to the Telegram end-user, to be notified of image processing
+            self.send_text(chat_id, "Image received and is being processed. Please wait...")

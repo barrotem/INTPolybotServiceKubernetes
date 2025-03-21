@@ -30,8 +30,7 @@ def get_secret():
         )
     except ClientError as e:
         raise e
-    secret = get_secret_value_response[
-        'SecretString']  #secret is a dictionary of all secrets defined within the manager
+    secret = get_secret_value_response['SecretString']  #secret is a dictionary of all secrets defined within the manager
     return secret
 
 
