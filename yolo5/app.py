@@ -41,7 +41,7 @@ IMAGES_BUCKET = secrets_dict["IMAGES_BUCKET"]
 QUEUE_NAME = secrets_dict["POLYBOT_QUEUE"]
 REGION_NAME = secrets_dict["DEPLOYED_REGION"]
 # Initialize polybot microservices related variables
-MONGO_URI = f'mongodb://{secrets_dict["MONGODB_HOSTS"]}/{secrets_dict["MONGODB_NAME"]}?replicaSet={secrets_dict["mongo_rs"]}'
+MONGO_URI = f'mongodb://{secrets_dict["MONGODB_HOSTS"]}/{secrets_dict["MONGODB_NAME"]}?replicaSet={secrets_dict["MONGODB_RS_NAME"]}'
 logger.info(MONGO_URI)
 mongo_client = pymongo.MongoClient(MONGO_URI)
 
