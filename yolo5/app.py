@@ -37,16 +37,18 @@ def get_secret():
 # Load secrets from AWS Secret Manager
 secrets_dict = json.loads(get_secret())
 # Access secrets loaded from secret manager
-images_bucket = secrets_dict["IMAGES_BUCKET"]
-queue_name = secrets_dict["POLYBOT_QUEUE"]
-region_name = secrets_dict["DEPLOYED_REGION"]
+IMAGES_BUCKET = secrets_dict["IMAGES_BUCKET"]
+QUEUE_NAME = secrets_dict["POLYBOT_QUEUE"]
+REGION_NAME = secrets_dict["DEPLOYED_REGION"]
+# Initialize polybot microservices related variables
+MONGO_URI = f'mongodb://{secrets_dict["MONGODB_HOSTS"]}/{secrets_dict["MONGODB_NAME"]}?replicaSet={secrets_dict["mongo_rs"]}'
+logger.info(MONGO_URI)
+mongo_client = pymongo.MongoClient(MONGO_URI)
 
 # Initialize AWS clients for image processing
 s3_client = boto3.client('s3')
-sqs_client = boto3.client('sqs', region_name=region_name)
-# Initialize polybot microservices related variables
-MONGO_URI = "mongodb://mongodb-statefulset-0.mongodb-service:27017,mongodb-statefulset-1.mongodb-service:27017,mongodb-statefulset-2.mongodb-service:27017/test?replicaSet=mongo_rs"
-mongo_client = pymongo.MongoClient(MONGO_URI)
+sqs_client = boto3.client('sqs', region_name=REGION_NAME)
+
 
 with open("data/coco128.yaml", "r") as stream:
     names = yaml.safe_load(stream)['names']
@@ -54,7 +56,7 @@ with open("data/coco128.yaml", "r") as stream:
 
 def consume():
     while True:
-        response = sqs_client.receive_message(QueueUrl=queue_name, MaxNumberOfMessages=1, WaitTimeSeconds=5)
+        response = sqs_client.receive_message(QueueUrl=QUEUE_NAME, MaxNumberOfMessages=1, WaitTimeSeconds=5)
 
         if 'Messages' in response:
             raw_message = response['Messages'][0]
@@ -80,7 +82,7 @@ def consume():
             folder_name = img_name.split('/')[0]
             if not os.path.exists(folder_name):
                 os.makedirs(folder_name)
-            s3_client.download_file(Bucket=images_bucket, Key=img_name, Filename=img_name)
+            s3_client.download_file(Bucket=IMAGES_BUCKET, Key=img_name, Filename=img_name)
             original_img_path = img_name
             original_img_name =  original_img_path.split("/")[1] # Represents the image's final path component - it's name
 
@@ -105,7 +107,7 @@ def consume():
 
             # Upload the predicted image to s3
             predicted_img_key = f'predictions/{original_img_name}'  # Taking img_name suffix into account, this creates : "prediction/filename.filetype"
-            s3_client.upload_file(Filename=predicted_img_path, Bucket=images_bucket, Key=predicted_img_key)
+            s3_client.upload_file(Filename=predicted_img_path, Bucket=IMAGES_BUCKET, Key=predicted_img_key)
             logger.info(f'prediction: {prediction_id}/{original_img_path} uploaded to s3 with the key: {predicted_img_key}.')
 
             # Parse prediction labels and create a summary
@@ -132,6 +134,7 @@ def consume():
                     'time': time.time()
                 }
 
+                # Store the prediction_summary in a MongoDB table
                 logger.info(f'storing prediction_summary in mongodb...')
                 test_db_client = mongo_client["test"]
                 predictions_collection = test_db_client["predictions"]
@@ -139,16 +142,16 @@ def consume():
                 document = {"_id": prediction_id, "prediction_summary": prediction_summary} # Allow fast indexing using prediction_id as the table's primary_key
                 write_result = predictions_collection.insert_one(document)
                 logger.info(f'Mongodb write result: {write_result}')
-                # TODO store the prediction_summary in a MongoDB table
+
                 # TODO perform a GET request to Polybot to `/results` endpoint
 
             # Delete the message from the queue as the job is considered as DONE
             logger.info(f'Deleting message {receipt_handle} from sqs, image processed successfully')
-            sqs_client.delete_message(QueueUrl=queue_name, ReceiptHandle=receipt_handle)
+            sqs_client.delete_message(QueueUrl=QUEUE_NAME, ReceiptHandle=receipt_handle)
 
 
 if __name__ == "__main__":
     try:
         consume()
     except Exception as e:
-        print(e)
+        print("General exception occurred. Yolo5 pod terminated", e)
