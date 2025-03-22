@@ -62,6 +62,7 @@ def webhook():
 
 @app.route(f'/results', methods=['POST'])
 def results():
+    logger.info(f'Received a POST request from Yolo5...')
     # Use the prediction_id to retrieve results from MongoDB and send to the end-user
     prediction_id = request.args.get('predictionId')
     chat_id = request.args.get('chatId')
@@ -71,9 +72,10 @@ def results():
     # Store a prediction inside the predictions collections
     document = predictions_collection.find_one({"_id": prediction_id})
     if document is not None:
-        logger.info(f'document: {document}, document type: {type(document)}')
-        text_results = ...
+        logger.info(f'Returning prediction summary for prediction {prediction_id} from chat id {chat_id}')
+        text_results = "The following objects were detected in the image :\n"+str(document['prediction_summary']['labels'])
     else:
+        logger.info(f'No prediction could be made for prediction {prediction_id} from chat id {chat_id}')
         text_results = "No prediction could be made for the given image. Please try a different image"
 
     bot.send_text(chat_id, text_results)
