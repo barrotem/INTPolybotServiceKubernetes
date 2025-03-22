@@ -82,13 +82,13 @@ class ObjectDetectionBot(Bot):
         # Initialize s3 related variables
         self.images_bucket = images_bucket
         self.about_message = """
-            Barrotem's polybot-k8s service\n\
-            ------------------------------\n\
-            Hello there, thank you for using me !\n\
-            I am a Telegram bot able to perform object detection and classification on images that you send me.\n\
-            \
-            To interact with me, simply attach an image.\n\
-            I will return the classified image with the detected objects, and textual representation.\n\
+        Barrotem's polybot-k8s service
+        ------------------------------
+        Hello there, thank you for using me !
+        I am a Telegram bot able to perform object detection and classification on images that you send me.
+        
+        To interact with me, simply attach an image.
+        I will return the classified image with the detected objects, and textual representation.
         """
 
     def handle_message(self, msg):
