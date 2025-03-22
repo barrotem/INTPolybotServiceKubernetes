@@ -49,7 +49,6 @@ mongo_client = pymongo.MongoClient(MONGO_URI)
 s3_client = boto3.client('s3')
 sqs_client = boto3.client('sqs', region_name=REGION_NAME)
 
-
 with open("data/coco128.yaml", "r") as stream:
     names = yaml.safe_load(stream)['names']
 
@@ -57,6 +56,7 @@ with open("data/coco128.yaml", "r") as stream:
 def consume():
     while True:
         response = sqs_client.receive_message(QueueUrl=QUEUE_NAME, MaxNumberOfMessages=1, WaitTimeSeconds=5)
+        # Response should contain a message with information regarding a raw image waiting to be processed in S3
 
         if 'Messages' in response:
             message = response['Messages'][0]['Body']
@@ -69,7 +69,7 @@ def consume():
             logger.info(f'prediction: {prediction_id}. start processing')
             logger.info(f'message: {message}, receipt_handle : {receipt_handle}')
 
-            # Receives a URL parameter representing the image to download from S3
+            # The SQS message contains metadata wih information regarding a raw image waiting to be processed in S3
             # message_dict is built by the following syntax :
             # {"text": "A new image was uploaded to the s3 bucket", "img_name": s3_photo_key, "chat_id": chat_id}
             message_dict = json.loads(message)
@@ -82,8 +82,8 @@ def consume():
                 os.makedirs(folder_name)
             s3_client.download_file(Bucket=IMAGES_BUCKET, Key=img_name, Filename=img_name)
             original_img_path = img_name
-            original_img_name = original_img_path.split("/")[1] # Represents the image's final path component - it's name
-
+            original_img_name = original_img_path.split("/")[
+                1]  # Represents the image's final path component - it's name
             logger.info(f'prediction: {prediction_id}/{original_img_path}. Download img completed')
 
             # Predicts the objects in the image
@@ -95,18 +95,19 @@ def consume():
                 name=prediction_id,
                 save_txt=True
             )
-
             logger.info(f'prediction: {prediction_id}/{original_img_path}. done')
+
             # This is the path for the predicted image with labels
             # The predicted image typically includes bounding boxes drawn around the detected objects,
             # along with class labels and possibly confidence scores.
-
-            predicted_img_path = Path(f'static/data/{prediction_id}/{original_img_name}')  # Yolo5 saves predicted image to a path determined by image filename only
+            predicted_img_path = Path(
+                f'static/data/{prediction_id}/{original_img_name}')  # Yolo5 saves predicted image to a path determined by image filename only
 
             # Upload the predicted image to s3
             predicted_img_key = f'predictions/{original_img_name}'  # Taking img_name suffix into account, this creates : "prediction/filename.filetype"
             s3_client.upload_file(Filename=predicted_img_path, Bucket=IMAGES_BUCKET, Key=predicted_img_key)
-            logger.info(f'prediction: {prediction_id}/{original_img_path} uploaded to s3 with the key: {predicted_img_key}.')
+            logger.info(
+                f'prediction: {prediction_id}/{original_img_path} uploaded to s3 with the key: {predicted_img_key}.')
 
             # Parse prediction labels and create a summary
             pred_summary_path = Path(f'static/data/{prediction_id}/labels/{original_img_name.split(".")[0]}.txt')
@@ -138,12 +139,14 @@ def consume():
                 test_db_client = mongo_client["test"]
                 predictions_collection = test_db_client["predictions"]
                 # Store a prediction inside the predictions collections
-                document = {"_id": prediction_id, "prediction_summary": prediction_summary} # Allow fast indexing using prediction_id as the table's primary_key
+                document = {"_id": prediction_id,
+                            "prediction_summary": prediction_summary}  # Allow fast indexing using prediction_id as the table's primary_key
                 write_result = predictions_collection.insert_one(document)
                 logger.info(f'Mongodb write result: {write_result}.')
 
             # The following block is executed whether predictions were made or not. Therefore, the user should be updated accordingly
-            # Perform a POST request to Polybot to `/results` endpoint
+            # Perform a POST request to Polybot to `/results` endpoint.
+            # Polybot will inform the user on prediction operation status according to the value of prediction_id
             logger.info(f'Image processing finished. Sending a POST request to polybot.')
             requests.post(url=f'http://polybot-service:8443/results?predictionId={prediction_id}&chatId={chat_id}')
 
@@ -152,10 +155,9 @@ def consume():
             sqs_client.delete_message(QueueUrl=QUEUE_NAME, ReceiptHandle=receipt_handle)
 
 
-
-
 if __name__ == "__main__":
     try:
         consume()
     except Exception as e:
+        # Except exceptions, log for development purposes
         print("General exception occurred. Yolo5 pod terminated", e)

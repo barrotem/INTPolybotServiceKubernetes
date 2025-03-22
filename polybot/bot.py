@@ -34,10 +34,7 @@ class Bot:
         return 'photo' in msg or 'document' in msg
 
     def download_user_photo(self, msg):
-        """
-        Downloads the photos that sent to the Bot to `photos` directory (should be existed)
-        :return:
-        """
+        # Downloads the photos that are sent to the bog to 'photos' directory
         logger.info(f'Received a new photo !')
         # Get photo files depending on uploading source - phone / desktop
         if 'photo' in msg:
@@ -57,7 +54,6 @@ class Bot:
             photo.write(data)  # Actually write the photo data to the file_path
 
         return file_info.file_path, photo_caption
-
 
     def send_photo(self, chat_id, img_path):
         if not os.path.exists(img_path):
@@ -85,19 +81,19 @@ class ObjectDetectionBot(Bot):
         self.sqs_name = polybot_queue
         # Initialize s3 related variables
         self.images_bucket = images_bucket
-        self.greeting_message = """
-    Barrotem's polybot service
-    --------------------------
-    Hello there, thank you for using me ! alon presentation
-    I am a Telegram bot able to perform object detection and classification on images that you send me.
-
-    To interact with me, simply attach an image.
-    I will return the classified image with the detected objects, and textual representation.
-    v1.0.2
-            """
+        self.about_message = """
+            Barrotem's polybot-k8s service
+            ------------------------------
+            Hello there, thank you for using me !
+            I am a Telegram bot able to perform object detection and classification on images that you send me.
+        
+            To interact with me, simply attach an image.
+            I will return the classified image with the detected objects, and textual representation.
+        """
 
     def handle_message(self, msg):
         logger.info(f'Incoming message: {msg}')
+        chat_id = msg['chat']['id']
 
         if self.is_current_msg_photo(msg):
             #Download the photo to local pod storage
@@ -113,17 +109,22 @@ class ObjectDetectionBot(Bot):
 
             # Upload the photo to S3
             self.s3_client.upload_file(Filename=photo_path, Bucket=self.images_bucket, Key=s3_photo_key)
-            logger.info(f'Successfully uploaded {photo_path} to "{self.images_bucket}" with the caption "{s3_photo_key}"')
+            logger.info(
+                f'Successfully uploaded {photo_path} to "{self.images_bucket}" with the caption "{s3_photo_key}"')
 
             # Send a job to the SQS queue
-            chat_id = msg['chat']['id']
-            sqs_message_body = {"text": "A new image was uploaded to the s3 bucket", "img_name": s3_photo_key, "chat_id": chat_id}
+            sqs_message_body = {"text": "A new image was uploaded to the s3 bucket", "img_name": s3_photo_key,
+                                "chat_id": chat_id}
             sqs_message_body = json.dumps(sqs_message_body)
             logger.info(f'Sending a job to sqs')
             self.sqs_client.send_message(QueueUrl=self.sqs_name, MessageBody=sqs_message_body)
 
             # Send message to the Telegram end-user, to be notified of image processing
             self.send_text(chat_id, "Image received and is being processed. Please wait...")
+
+        else:
+            # Message doesn't contain an image
+            self.send_text(chat_id, self.about_message)
 
     def download_s3_image(self, s3_img_path):
         # Download image from s3

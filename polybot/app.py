@@ -85,11 +85,13 @@ def results():
             else:
                 # Detected object is NEW within the image. Initialize a counter for it
                 predictions_classes[prediction['class']] = 1
+
         # Format a text message to send to the user
         predicted_object_counts = "The following objects were detected in the image :\n"
         for predicted_class, counter in predictions_classes.items():
             predicted_object_counts += f'{predicted_class} : {counter}\n'
 
+        # Send the predicted photo to the user
         predicted_img_path = bot.download_s3_image(document['prediction_summary']['s3_img_path'])
         bot.send_photo(chat_id,predicted_img_path)
         text_results = predicted_object_counts
