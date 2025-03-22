@@ -73,10 +73,26 @@ def results():
     document = predictions_collection.find_one({"_id": prediction_id})
     if document is not None:
         # Prediction image was created. Send the text results and image to the user
+        # Format the text results :
         logger.info(f'Returning prediction summary for prediction {prediction_id} from chat id {chat_id}')
-        text_results = "The following objects were detected in the image :\n"+str(document['prediction_summary']['labels'])
+        # Generate prediction class counts, reformat and send to user
+        predictions = document['prediction_summary']['labels'] # Predictions is a list of dicts representing detected objects within the image
+        predictions_classes = {}
+        for prediction in predictions:
+            if prediction['class'] in predictions_classes:
+                # This prediction class was encountered before, add 1 to the occurrence counter
+                predictions_classes[prediction['class']] += 1
+            else:
+                # Detected object is NEW within the image. Initialize a counter for it
+                predictions_classes[prediction['class']] = 1
+        # Format a text message to send to the user
+        predicted_object_counts = "The following objects were detected in the image :\n"
+        for predicted_class, counter in predictions_classes:
+            predicted_object_counts += f'{predicted_class} : {counter}\n'
+
         predicted_img_path = bot.download_s3_image(document['prediction_summary']['s3_img_path'])
         bot.send_photo(chat_id,predicted_img_path)
+        text_results = predicted_object_counts
     else:
         logger.info(f'No prediction could be made for prediction {prediction_id} from chat id {chat_id}')
         text_results = "No prediction could be made for the given image. Please try a different image"
