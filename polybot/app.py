@@ -72,8 +72,11 @@ def results():
     # Store a prediction inside the predictions collections
     document = predictions_collection.find_one({"_id": prediction_id})
     if document is not None:
+        # Prediction image was created. Send the text results and image to the user
         logger.info(f'Returning prediction summary for prediction {prediction_id} from chat id {chat_id}')
         text_results = "The following objects were detected in the image :\n"+str(document['prediction_summary']['labels'])
+        predicted_img_path = bot.download_s3_image(document['prediction_summary']['s3_img_path'])
+        bot.send_photo(chat_id,predicted_img_path)
     else:
         logger.info(f'No prediction could be made for prediction {prediction_id} from chat id {chat_id}')
         text_results = "No prediction could be made for the given image. Please try a different image"

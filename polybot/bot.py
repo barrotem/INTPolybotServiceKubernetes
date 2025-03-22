@@ -58,6 +58,7 @@ class Bot:
 
         return file_info.file_path, photo_caption
 
+
     def send_photo(self, chat_id, img_path):
         if not os.path.exists(img_path):
             raise RuntimeError("Image path doesn't exist")
@@ -123,3 +124,12 @@ class ObjectDetectionBot(Bot):
 
             # Send message to the Telegram end-user, to be notified of image processing
             self.send_text(chat_id, "Image received and is being processed. Please wait...")
+
+    def download_s3_image(self, s3_img_path):
+        # Download image from s3
+        folder_name = s3_img_path.split('/')[0]
+        if not os.path.exists(folder_name):
+            os.makedirs(folder_name)
+
+        self.s3_client.download_file(Bucket=self.images_bucket, Key=s3_img_path, Filename=s3_img_path)
+        return s3_img_path
