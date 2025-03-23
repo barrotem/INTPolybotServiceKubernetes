@@ -83,7 +83,7 @@ class ObjectDetectionBot(Bot):
         self.images_bucket = images_bucket
         self.about_message = """
 Barrotem's polybot-k8s service
-------------------------------------------------------------
+---------------------------------------------
 Hello there, thank you for using me !
 I am a Telegram bot able to perform object detection and classification on images that you send me.
 
